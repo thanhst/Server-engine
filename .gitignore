@@ -1,0 +1,14 @@
+.vs/
+out/
+build/
+logs/
+CMakeUserPresets.json
+CMakeCache.txt
+CMakeFiles/
+cmake_install.cmake
+ALL_BUILD.vcxproj*
+ZERO_CHECK.vcxproj*
+*.sln
+*.vcxproj
+*.vcxproj.filters
+*.user
