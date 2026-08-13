@@ -137,9 +137,7 @@ void Logger::log(LogLevel level, std::string_view message)
 
     if (file_.is_open()) {
         file_ << line << '\n';
-        if (level >= LogLevel::Warning) {
-            file_.flush();
-        }
+        file_.flush();
     }
 }
 

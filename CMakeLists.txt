@@ -18,8 +18,10 @@ add_library(ServerEnginePort STATIC
     include/ServerEngine/Port/Clock.h
     include/ServerEngine/Port/Platform.h
     include/ServerEngine/Port/Process.h
+    include/ServerEngine/Port/Socket.h
     src/Port/Clock.cpp
     src/Port/Process.cpp
+    src/Port/Socket.cpp
 )
 
 target_include_directories(ServerEnginePort
@@ -28,8 +30,10 @@ target_include_directories(ServerEnginePort
 )
 
 add_library(ServerEngineCore STATIC
+    include/ServerEngine/Core/Buffer.h
     include/ServerEngine/Core/Config.h
     include/ServerEngine/Core/Logger.h
+    src/Core/Buffer.cpp
     src/Core/Config.cpp
     src/Core/Logger.cpp
 )
@@ -44,17 +48,98 @@ target_link_libraries(ServerEngineCore
         ServerEnginePort
 )
 
-add_executable(ServerEngine
-    ServerEngine.cpp
+add_library(ServerEngineNet STATIC
+    include/ServerEngine/Net/Endpoint.h
+    include/ServerEngine/Net/ITcpServer.h
+    include/ServerEngine/Net/TcpBackend.h
+    include/ServerEngine/Net/TcpIocpServer.h
+    include/ServerEngine/Net/TcpServer.h
+    include/ServerEngine/Net/TcpTypes.h
+    include/ServerEngine/Net/TransportKind.h
+    src/Net/Endpoint.cpp
+    src/Net/TcpBackend.cpp
+    src/Net/TcpIocpServer.cpp
+    src/Net/TcpServer.cpp
+    src/Net/TransportKind.cpp
 )
 
-target_link_libraries(ServerEngine
-    PRIVATE
+target_include_directories(ServerEngineNet
+    PUBLIC
+        ${CMAKE_CURRENT_SOURCE_DIR}/include
+)
+
+target_link_libraries(ServerEngineNet
+    PUBLIC
         ServerEngineCore
         ServerEnginePort
 )
 
-foreach(target_name IN ITEMS ServerEnginePort ServerEngineCore ServerEngine)
+add_library(ServerEngineSecurity STATIC
+    include/ServerEngine/Security/CredentialVerifier.h
+    include/ServerEngine/Security/EccProvider.h
+    include/ServerEngine/Security/SecurityMode.h
+    src/Security/CredentialVerifier.cpp
+    src/Security/EccProvider.cpp
+    src/Security/SecurityMode.cpp
+)
+
+target_include_directories(ServerEngineSecurity
+    PUBLIC
+        ${CMAKE_CURRENT_SOURCE_DIR}/include
+)
+
+target_link_libraries(ServerEngineSecurity
+    PUBLIC
+        ServerEnginePort
+)
+
+add_library(ServerEngineRuntime STATIC
+    include/ServerEngine/Runtime/ConnectionHub.h
+    include/ServerEngine/Runtime/IMessageHandler.h
+    include/ServerEngine/Runtime/Server.h
+    include/ServerEngine/Runtime/ServerOptions.h
+    include/ServerEngine/Runtime/Session.h
+    src/Runtime/ConnectionHub.cpp
+    src/Runtime/IMessageHandler.cpp
+    src/Runtime/Server.cpp
+    src/Runtime/Session.cpp
+)
+
+target_include_directories(ServerEngineRuntime
+    PUBLIC
+        ${CMAKE_CURRENT_SOURCE_DIR}/include
+)
+
+target_link_libraries(ServerEngineRuntime
+    PUBLIC
+        ServerEngineCore
+        ServerEngineNet
+        ServerEngineSecurity
+)
+
+add_executable(ServerEngine
+    ServerEngine.cpp
+)
+
+add_executable(ServerEngineTcpTest
+    tests/test.cpp
+)
+
+target_link_libraries(ServerEngine
+    PRIVATE
+        ServerEngineRuntime
+        ServerEngineCore
+        ServerEngineNet
+        ServerEnginePort
+        ServerEngineSecurity
+)
+
+target_link_libraries(ServerEngineTcpTest
+    PRIVATE
+        ServerEnginePort
+)
+
+foreach(target_name IN ITEMS ServerEnginePort ServerEngineCore ServerEngineNet ServerEngineSecurity ServerEngineRuntime ServerEngine ServerEngineTcpTest)
     target_compile_features(${target_name} PUBLIC cxx_std_17)
     set_target_properties(${target_name} PROPERTIES CXX_EXTENSIONS OFF)
 
@@ -78,6 +163,17 @@ foreach(target_name IN ITEMS ServerEnginePort ServerEngineCore ServerEngine)
         )
     endif()
 endforeach()
+
+if(WIN32)
+    target_link_libraries(ServerEnginePort
+        PUBLIC
+            ws2_32
+    )
+    target_link_libraries(ServerEngineSecurity
+        PUBLIC
+            bcrypt
+    )
+endif()
 
 if(MSVC)
     target_link_options(ServerEngine PRIVATE
