@@ -11,14 +11,40 @@
       "displayName": "Visual Studio 2022 x64",
       "generator": "Visual Studio 17 2022",
       "architecture": "x64",
-      "binaryDir": "${sourceDir}/out/build/${presetName}"
+      "binaryDir": "${sourceDir}/out/build/${presetName}",
+      "cacheVariables": {
+        "SE_BUILD_DLL": "OFF"
+      }
     },
     {
       "name": "vs2022-x86",
       "displayName": "Visual Studio 2022 x86",
       "generator": "Visual Studio 17 2022",
       "architecture": "Win32",
-      "binaryDir": "${sourceDir}/out/build/${presetName}"
+      "binaryDir": "${sourceDir}/out/build/${presetName}",
+      "cacheVariables": {
+        "SE_BUILD_DLL": "OFF"
+      }
+    },
+    {
+      "name": "vs2022-x64-dll",
+      "displayName": "ServerEngine DLL + examples (x64, vcpkg)",
+      "inherits": "vs2022-x64",
+      "cacheVariables": {
+        "VCPKG_TARGET_TRIPLET": "x64-windows-static-md",
+        "SE_BUILD_DLL": "ON",
+        "CMAKE_TOOLCHAIN_FILE": "$env{VCPKG_ROOT}/scripts/buildsystems/vcpkg.cmake"
+      }
+    },
+    {
+      "name": "vs2022-x86-dll",
+      "displayName": "ServerEngine DLL + examples (x86, vcpkg)",
+      "inherits": "vs2022-x86",
+      "cacheVariables": {
+        "VCPKG_TARGET_TRIPLET": "x86-windows-static-md",
+        "SE_BUILD_DLL": "ON",
+        "CMAKE_TOOLCHAIN_FILE": "$env{VCPKG_ROOT}/scripts/buildsystems/vcpkg.cmake"
+      }
     }
   ],
   "buildPresets": [
@@ -40,6 +66,26 @@
     {
       "name": "vs2022-x86-release",
       "configurePreset": "vs2022-x86",
+      "configuration": "Release"
+    },
+    {
+      "name": "vs2022-x64-dll-debug",
+      "configurePreset": "vs2022-x64-dll",
+      "configuration": "Debug"
+    },
+    {
+      "name": "vs2022-x64-dll-release",
+      "configurePreset": "vs2022-x64-dll",
+      "configuration": "Release"
+    },
+    {
+      "name": "vs2022-x86-dll-debug",
+      "configurePreset": "vs2022-x86-dll",
+      "configuration": "Debug"
+    },
+    {
+      "name": "vs2022-x86-dll-release",
+      "configurePreset": "vs2022-x86-dll",
       "configuration": "Release"
     }
   ]

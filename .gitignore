@@ -2,6 +2,11 @@
 out/
 build/
 logs/
+vcpkg_installed/
+certs/
+*.sqlite
+*.sqlite-shm
+*.sqlite-wal
 CMakeUserPresets.json
 CMakeCache.txt
 CMakeFiles/

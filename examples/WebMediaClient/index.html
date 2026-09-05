@@ -1,0 +1,48 @@
+<!doctype html>
+<html lang="vi">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>ServerEngine — Web, Data và Media</title>
+<link rel="icon" href="data:,">
+<style>
+  body { font: 16px/1.55 system-ui, sans-serif; color: #17324a; background: #f3f6fa; max-width: 1000px; margin: 40px auto; padding: 0 20px; }
+  section { background: white; padding: 24px; margin: 20px 0; border: 1px solid #dbe3ed; border-radius: 12px; }
+  h1, h2 { line-height: 1.2; } h2 { font-size: 22px; }
+  button { padding: 10px 16px; margin: 4px 4px 4px 0; border: 0; border-radius: 6px; background: #1764a2; color: white; cursor: pointer; }
+  button:disabled { background: #8799aa; cursor: default; }
+  .videos { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; }
+  video { width: 100%; background: #142332; border-radius: 8px; min-height: 150px; }
+  pre { white-space: pre-wrap; overflow-wrap: anywhere; background: #edf2f7; padding: 12px; max-height: 220px; overflow: auto; }
+  .note { color: #536678; } label { display: inline-block; margin-right: 12px; }
+  @media (max-width: 650px) { .videos { grid-template-columns: 1fr; } }
+</style>
+<h1>ServerEngine: một DLL, hai module</h1>
+<p>Ví dụ web dùng HTTPS, truy vấn nền qua Data, và gọi audio/video qua WebRTC.</p>
+<section>
+  <h2>1. Web API → SQL → kết quả</h2>
+  <p>Endpoint chỉ đọc một profile mẫu, không phải chức năng đăng nhập.</p>
+  <button id="profile">Đọc profile mẫu</button>
+  <pre id="profile-result">Chưa gửi yêu cầu.</pre>
+</section>
+<section>
+  <h2>2. Truyền dữ liệu nhị phân</h2>
+  <p>Chọn file audio/video bất kỳ. Demo gửi tối đa 16 KiB đầu tiên qua HTTPS rồi kiểm tra byte trả về; không upload hoặc lưu cả file.</p>
+  <input type="file" id="file" accept="audio/*,video/*">
+  <button id="binary">Kiểm tra một khối dữ liệu</button>
+  <pre id="binary-result">Network vận chuyển byte, không tự giải mã video.</pre>
+</section>
+<section>
+  <h2>3. Audio/video trực tiếp giữa hai tab</h2>
+  <p>Demo có một phòng chung, tối đa hai người, chưa có tài khoản hay phòng riêng. Chỉ dùng thử với người bạn chủ động cho tham gia.</p>
+  <p class="note">Mở hai tab trên cùng máy. WSS chuyển SDP/ICE; WebRTC truyền media. Demo không cấu hình STUN/TURN, nên không bảo đảm kết nối giữa các mạng khác nhau.</p>
+  <label><input type="checkbox" id="camera" checked> Bật camera</label>
+  <button id="join">Bắt đầu camera/mic và tham gia</button>
+  <button id="leave" disabled>Dừng và rời phòng</button>
+  <div class="videos">
+    <div><p>Bạn</p><video id="local" autoplay muted playsinline></video></div>
+    <div><p>Người bên kia</p><video id="remote" autoplay controls playsinline></video></div>
+  </div>
+  <pre id="log" role="status" aria-live="polite">Sẵn sàng. Chứng chỉ HTTPS/WSS phải được trình duyệt tin cậy.</pre>
+</section>
+<script src="/app.js" defer></script>
+</html>

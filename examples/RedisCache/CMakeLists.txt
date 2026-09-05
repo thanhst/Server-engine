@@ -1,0 +1,4 @@
+add_executable(ServerEngineRedisCache main.cpp)
+target_link_libraries(ServerEngineRedisCache PRIVATE ServerEngineDll)
+serverengine_target_defaults(ServerEngineRedisCache)
+set_target_properties(ServerEngineRedisCache PROPERTIES RUNTIME_OUTPUT_DIRECTORY ${PROJECT_BINARY_DIR})

@@ -1,0 +1,47 @@
+<!doctype html>
+<html lang="vi">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>ServerEngine — WSS client</title>
+<style>
+body{font:16px system-ui;max-width:760px;margin:3rem auto;padding:0 1rem;color:#172b4d}
+input,button{font:inherit;padding:.6rem;margin:.3rem 0} input{width:70%}
+pre{background:#eef3f8;padding:1rem;min-height:12rem;white-space:pre-wrap;overflow-wrap:anywhere}
+</style>
+<h1>Client web dùng ServerEngine</h1>
+<p>Chạy GameServer trước. Trình duyệt phải tin cậy chứng chỉ và hostname;
+client này không bỏ qua xác minh TLS.</p>
+<label>Endpoint <input id="url" value="wss://localhost:9444/game"></label>
+<button id="connect">Kết nối</button>
+<p><label>Lệnh <input id="command" value="PING" maxlength="256"></label>
+<button id="send" disabled>Gửi</button></p>
+<p>Lệnh mẫu: <code>PING</code>, <code>NAME Thanh</code>, <code>STATS</code>.
+NAME là tên hiển thị, chưa phải đăng nhập.</p>
+<pre id="log" aria-live="polite"></pre>
+<script>
+let socket;
+const log = document.querySelector('#log');
+const send = document.querySelector('#send');
+function write(message) {
+  log.textContent = (log.textContent + message + '\n').slice(-16000);
+}
+document.querySelector('#connect').onclick = () => {
+  if (socket) socket.close();
+  const current = new WebSocket(document.querySelector('#url').value);
+  socket = current;
+  send.disabled = true;
+  current.binaryType = 'arraybuffer';
+  current.onopen = () => { if (socket === current) send.disabled = false; write('OPEN'); };
+  current.onclose = event => { if (socket === current) send.disabled = true; write('CLOSE ' + event.code); };
+  current.onerror = () => write('ERROR: kiểm tra server, chứng chỉ, hostname và port.');
+  current.onmessage = event => write('RECV ' + new TextDecoder().decode(event.data));
+};
+send.onclick = () => {
+  if (!socket || socket.readyState !== WebSocket.OPEN) return;
+  const text = document.querySelector('#command').value;
+  // Sending Uint8Array makes this a binary WS message, as the engine expects.
+  socket.send(new TextEncoder().encode(text));
+  write('SEND ' + text);
+};
+</script>
+</html>
