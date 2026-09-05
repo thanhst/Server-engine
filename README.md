@@ -43,16 +43,18 @@ giữ việc quản lý vòng đời, giới hạn tài nguyên và chuyển s�
 Phần C++ `runtime::Server` và ứng dụng `AUTH / WHO / echo` bên dưới được giữ
 để tương thích và học IOCP/threaded. Chúng dùng TCP theo dòng, **khác wire format
 của DLL mới**. Các preset cũ chỉ build phần này; preset có hậu tố `-dll` build SDK.
+Ứng dụng mẫu nằm trong `examples/EchoServer/`, tự sở hữu `EchoHandler` và cấu
+hình của nó. Dự án dùng engine không cần chạy hay liên kết ứng dụng Echo này.
 
 Mục tiêu của cấu trúc này: nhìn tên module biết nó làm gì, tìm được nơi cần sửa,
 và biết đối tượng nào chịu trách nhiệm giải phóng tài nguyên.
 
 ## Đọc phần C++ tương thích cũ
 
-1. [ServerEngine.cpp](ServerEngine.cpp): điểm vào chương trình, gọi `app::run()`.
-2. [Application.cpp](apps/EchoServer/Application.cpp): đọc cấu hình, tạo logger,
+1. [main.cpp](examples/EchoServer/main.cpp): điểm vào ứng dụng Echo, gọi `app::run()`.
+2. [Application.cpp](examples/EchoServer/Application.cpp): đọc cấu hình, tạo logger,
    handler và server, chờ Ctrl+C, dừng server.
-3. [EchoHandler.cpp](apps/EchoServer/EchoHandler.cpp): logic dễ thử nhất;
+3. [EchoHandler.cpp](examples/EchoServer/EchoHandler.cpp): logic dễ thử nhất;
    nhận một message và trả về `AUTH OK`, `WHO...` hoặc `echo: ...`.
 4. [Server.cpp](src/Runtime/Server.cpp): khởi động listener và gọi handler.
 5. [TcpListener.cpp](src/Runtime/TcpListener.cpp): chuyển sự kiện TCP thành session.
@@ -64,7 +66,7 @@ Nếu mới học networking, đọc backend `src/Net/Threaded/` trước IOCP.
 
 | Nơi | Trách nhiệm |
 | --- | --- |
-| `apps/EchoServer/` | Cấu hình và logic của ứng dụng mẫu |
+| `examples/EchoServer/` | Điểm vào, cấu hình và `EchoHandler` của ứng dụng mẫu |
 | `include/ServerEngine/` | API để dự án khác sử dụng engine |
 | `src/Runtime/` | Vòng đời server, session, chuyển callback đến ứng dụng |
 | `src/Net/` | Kết nối TCP, I/O, phân tách message |
@@ -79,6 +81,8 @@ Nếu mới học networking, đọc backend `src/Net/Threaded/` trước IOCP.
 ## Build và chạy thủ công
 
 Mở terminal tại thư mục gốc repo. CMake sinh project Visual Studio vào `out/`.
+Ví dụ Echo vẫn có target `ServerEngine` và xuất `ServerEngine.exe`; việc chuyển
+source vào `examples/EchoServer/` không đổi lệnh chạy.
 
 ```powershell
 cmake --preset vs2022-x64

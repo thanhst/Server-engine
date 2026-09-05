@@ -1,4 +1,4 @@
-# Application code is reusable by in-process protocol tests, not by the engine.
+# Sample application code is shared with its protocol tests, not with the engine.
 add_library(ServerEngineEchoApp STATIC
     AppConfig.h AppConfig.cpp
     EchoHandler.h EchoHandler.cpp
@@ -9,7 +9,7 @@ target_include_directories(ServerEngineEchoApp PUBLIC ${CMAKE_CURRENT_SOURCE_DIR
 target_link_libraries(ServerEngineEchoApp PUBLIC ServerEngineRuntime)
 serverengine_target_defaults(ServerEngineEchoApp)
 
-add_executable(ServerEngine ${PROJECT_SOURCE_DIR}/ServerEngine.cpp)
+add_executable(ServerEngine main.cpp)
 target_link_libraries(ServerEngine PRIVATE ServerEngineEchoApp)
 serverengine_target_defaults(ServerEngine)
 if(MSVC)

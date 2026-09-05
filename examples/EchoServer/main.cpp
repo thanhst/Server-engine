@@ -1,4 +1,4 @@
-#include "apps/EchoServer/Application.h"
+#include "Application.h"
 
 int main()
 {

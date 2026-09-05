@@ -198,10 +198,12 @@ Repo giữ hai đường chạy. Chọn đúng đường trước khi đặt bre
 | Đường | Entry point và transport |
 | --- | --- |
 | DLL đang dùng bởi Game/Web | `examples/*/main.cpp` → C ABI → `src/Net/Async/` |
-| Echo C++ tương thích cũ | [ServerEngine.cpp](../ServerEngine.cpp) → [app::run](../apps/EchoServer/Application.cpp) → [runtime::Server](../src/Runtime/Server.cpp) |
+| Echo C++ tương thích cũ | [main.cpp](../examples/EchoServer/main.cpp) → [app::run](../examples/EchoServer/Application.cpp) → [runtime::Server](../src/Runtime/Server.cpp) |
 
 Echo cũ dùng `AUTH/WHO/echo` theo dòng; không dùng framing 4 byte của DLL.
-Đọc [EchoHandler::on_message](../apps/EchoServer/EchoHandler.cpp),
+Ứng dụng Echo sở hữu `EchoHandler` trong `examples/EchoServer/`; engine chỉ gọi
+interface `IMessageHandler`. Ứng dụng riêng của bạn không cần dùng mẫu Echo.
+Đọc [EchoHandler::on_message](../examples/EchoServer/EchoHandler.cpp),
 [runtime::detail::TcpListener::on_message](../src/Runtime/TcpListener.cpp), rồi
 [threaded::ClientConnection::receive_messages](../src/Net/Threaded/ClientConnection.cpp).
 Sau đó đọc [IOCP Server::accept_loop](../src/Net/Iocp/ServerAccept.cpp) và

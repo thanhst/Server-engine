@@ -40,6 +40,10 @@ sai hostname, client đọc chậm, reconnect và stop khi còn I/O trước khi
 
 ## C++ sample tương thích cũ
 
+Sample Echo nằm trong [examples/EchoServer](../examples/EchoServer/main.cpp),
+tự cung cấp `EchoHandler` cho runtime. Việc chuyển thư mục không đổi target
+`ServerEngine`, file `ServerEngine.exe` hay các lệnh kiểm tra bên dưới.
+
 Các test C++ sau được đăng ký với CTest, không dùng framework ngoài và không
 cần server đang chạy. Chúng dùng điều kiện kiểm tra có exception thay vì
 `assert`, nên vẫn kiểm tra trong cấu hình Release.

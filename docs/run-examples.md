@@ -124,4 +124,6 @@ Release, chạy `.\scripts\run-example.ps1 -Example Web -Configuration Release`
 hoặc đổi `Web` thành `Game`.
 
 Không dùng `ServerEngine.exe` hoặc `ServerEngineTcpTest.exe` để thử hai demo
-này: đó là server/client mẫu cũ với giao thức TCP khác.
+này: đó là server/client mẫu cũ với giao thức TCP khác. Điểm vào server Echo
+hiện ở [examples/EchoServer/main.cpp](../examples/EchoServer/main.cpp); tên
+`ServerEngine.exe` được giữ để các lệnh chạy cũ tiếp tục dùng được.

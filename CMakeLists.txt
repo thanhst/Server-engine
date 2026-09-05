@@ -172,7 +172,7 @@ foreach(target_name IN ITEMS ServerEnginePort ServerEngineCore ServerEngineNet S
     serverengine_target_defaults(${target_name})
 endforeach()
 
-add_subdirectory(apps/EchoServer)
+add_subdirectory(examples/EchoServer)
 if(SE_BUILD_DLL)
     find_package(Boost 1.85 REQUIRED CONFIG)
     find_package(OpenSSL 3.0 REQUIRED)

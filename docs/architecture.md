@@ -63,6 +63,8 @@ flowchart TD
 `Net` không include `EchoHandler` hay biết lệnh `WHO`.
 Muốn dùng engine trong một ứng dụng khác, tạo lớp kế thừa `IMessageHandler`,
 truyền handler đó vào `runtime::Server` và link `ServerEngineRuntime`.
+`EchoHandler` thuộc [ứng dụng mẫu EchoServer](../examples/EchoServer/main.cpp),
+không thuộc engine. Bạn có thể dùng engine mà không chạy hay liên kết mẫu Echo.
 
 Không cần thêm interface cho mọi lớp. `ITcpServer` có ý nghĩa vì đã có hai
 backend; `IMessageHandler` có ý nghĩa vì ứng dụng thay được logic xử lý. Các
@@ -92,6 +94,10 @@ tại chưa cung cấp handle gửi nền có vòng đời độc lập.
 ## Từng module làm gì?
 
 ### Ứng dụng mẫu
+
+Các file bên dưới nằm trong `examples/EchoServer/`. Điểm vào
+[main.cpp](../examples/EchoServer/main.cpp) gọi `app::run()`; tên target và
+chương trình xuất ra vẫn là `ServerEngine` / `ServerEngine.exe`.
 
 - `AppConfig`: đổi key INI thành cấu hình có kiểu và tập hợp cảnh báo.
 - `Application`: lắp các thành phần, chạy và dừng chương trình.
