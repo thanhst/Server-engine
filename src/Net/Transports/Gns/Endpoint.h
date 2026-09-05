@@ -6,7 +6,7 @@
 #include <unordered_map>
 #include <vector>
 
-namespace serverengine::net::game {
+namespace serverengine::net::gns {
 
 // All Endpoint operations and native callbacks run under Runtime's mutex.
 // GNS owns its I/O workers. We never call application code from those workers.
@@ -18,13 +18,13 @@ struct Peer {
     bool connected{false};
 };
 struct QueuedEvent {
-    se_game_event metadata;
+    se_datagram_event metadata;
     std::vector<unsigned char> bytes;
 };
 
 class Endpoint final {
 public:
-    Endpoint(se_game_handle id, const se_game_options& options);
+    Endpoint(se_datagram_handle id, const se_datagram_options& options);
     ~Endpoint();
     Endpoint(const Endpoint&) = delete;
     Endpoint& operator=(const Endpoint&) = delete;
@@ -32,7 +32,7 @@ public:
     se_status connect(const char* address, uint32_t port, uint64_t& peer);
     se_status send(uint64_t peer, uint32_t delivery, const void* data, uint32_t size);
     se_status disconnect(uint64_t peer);
-    se_status take(se_game_event& event, void* payload, uint32_t capacity);
+    se_status take(se_datagram_event& event, void* payload, uint32_t capacity);
     void receive();
     void on_status(const SteamNetConnectionStatusChangedCallback_t& change) noexcept;
     void shutdown() noexcept;
@@ -40,13 +40,13 @@ public:
     bool stopped() const { return stopped_; }
 
 private:
-    bool push(se_game_event event, const void* data = nullptr, uint32_t size = 0) noexcept;
+    bool push(se_datagram_event event, const void* data = nullptr, uint32_t size = 0) noexcept;
     void overflow() noexcept;
     void drop(HSteamNetConnection connection, int reason, const char* message) noexcept;
     using Peers = std::unordered_map<HSteamNetConnection, Peer>;
     Peers::iterator find_peer(uint64_t id);
-    const se_game_handle id_;
-    const se_game_options options_;
+    const se_datagram_handle id_;
+    const se_datagram_options options_;
     ISteamNetworkingSockets* api_;
     HSteamListenSocket listener_{k_HSteamListenSocket_Invalid};
     HSteamNetPollGroup group_{k_HSteamNetPollGroup_Invalid};
@@ -56,4 +56,4 @@ private:
     bool stopped_{false}, overflow_{false}, overflow_reported_{false};
 };
 
-} // namespace serverengine::net::game
+} // namespace serverengine::net::gns

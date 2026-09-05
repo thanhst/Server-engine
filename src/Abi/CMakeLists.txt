@@ -3,18 +3,20 @@ add_library(ServerEngineDll SHARED
     Boundary.h HandleRegistry.h HandleRegistry.cpp
     Options.h Options.cpp
     Lifecycle.cpp Messaging.cpp
-    Http.cpp Sql.cpp Redis.cpp GameTransport.cpp
+    Http.cpp Sql.cpp Redis.cpp DatagramTransport.cpp GameTransport.cpp
     ${PROJECT_SOURCE_DIR}/include/ServerEngine/C/Http.h
     ${PROJECT_SOURCE_DIR}/include/ServerEngine/C/Sql.h
     ${PROJECT_SOURCE_DIR}/include/ServerEngine/C/Redis.h
     ${PROJECT_SOURCE_DIR}/include/ServerEngine/Cpp/Engine.h
+    ${PROJECT_SOURCE_DIR}/include/ServerEngine/C/DatagramTransport.h
+    ${PROJECT_SOURCE_DIR}/include/ServerEngine/Cpp/DatagramTransport.h
     ${PROJECT_SOURCE_DIR}/include/ServerEngine/C/GameTransport.h
     ${PROJECT_SOURCE_DIR}/include/ServerEngine/Cpp/GameTransport.h
 )
 target_include_directories(ServerEngineDll
     PUBLIC ${PROJECT_SOURCE_DIR}/include
     PRIVATE ${PROJECT_SOURCE_DIR}/src)
-target_link_libraries(ServerEngineDll PRIVATE ServerEngineNetwork ServerEngineData ServerEngineGameTransport)
+target_link_libraries(ServerEngineDll PRIVATE ServerEngineNetwork ServerEngineData ServerEngineGns)
 target_compile_definitions(ServerEngineDll PRIVATE SERVERENGINE_DLL_BUILD)
 serverengine_target_defaults(ServerEngineDll)
 set_target_properties(ServerEngineDll PROPERTIES
@@ -42,7 +44,9 @@ install(FILES
     ${PROJECT_SOURCE_DIR}/include/ServerEngine/C/Http.h
     ${PROJECT_SOURCE_DIR}/include/ServerEngine/C/Sql.h
     ${PROJECT_SOURCE_DIR}/include/ServerEngine/C/Redis.h
+    ${PROJECT_SOURCE_DIR}/include/ServerEngine/C/DatagramTransport.h
     ${PROJECT_SOURCE_DIR}/include/ServerEngine/C/GameTransport.h
     DESTINATION include/ServerEngine/C)
 install(FILES ${PROJECT_SOURCE_DIR}/include/ServerEngine/Cpp/Engine.h
+    ${PROJECT_SOURCE_DIR}/include/ServerEngine/Cpp/DatagramTransport.h
     ${PROJECT_SOURCE_DIR}/include/ServerEngine/Cpp/GameTransport.h DESTINATION include/ServerEngine/Cpp)

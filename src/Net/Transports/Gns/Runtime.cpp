@@ -10,12 +10,12 @@
 #include <string>
 #include <unordered_map>
 
-namespace serverengine::net::game {
+namespace serverengine::net::gns {
 namespace {
 struct Runtime {
     std::mutex mutex;
     std::condition_variable changed;
-    std::unordered_map<se_game_handle, std::shared_ptr<Endpoint>> endpoints;
+    std::unordered_map<se_datagram_handle, std::shared_ptr<Endpoint>> endpoints;
     uint64_t next_endpoint{1}, next_peer{1};
     bool initialized{false};
 
@@ -37,7 +37,7 @@ struct Runtime {
             initialized = false;
         }
     }
-    std::shared_ptr<Endpoint> find(se_game_handle id) {
+    std::shared_ptr<Endpoint> find(se_datagram_handle id) {
         const auto found = endpoints.find(id);
         return found == endpoints.end() ? nullptr : found->second;
     }
@@ -50,7 +50,7 @@ struct Runtime {
 Runtime& runtime() { static Runtime instance; return instance; }
 
 template<class Operation>
-se_status with_endpoint(se_game_handle id, Operation operation) {
+se_status with_endpoint(se_datagram_handle id, Operation operation) {
     auto& state = runtime();
     std::lock_guard<std::mutex> lock(state.mutex);
     const auto endpoint = state.find(id);
@@ -61,7 +61,7 @@ se_status with_endpoint(se_game_handle id, Operation operation) {
 uint64_t next_peer_id()
 {
     auto& state = runtime(); // Caller already holds mutex; never reuse public IDs.
-    if (state.next_peer > UINT64_C(0x00ffffffffffffff)) throw std::overflow_error("Game peer ID space exhausted");
+    if (state.next_peer > UINT64_C(0x00ffffffffffffff)) throw std::overflow_error("Datagram peer ID space exhausted");
     return UINT64_C(0x5000000000000000) | state.next_peer++;
 }
 
@@ -80,7 +80,7 @@ void status_changed(SteamNetConnectionStatusChangedCallback_t* change) noexcept
         SteamNetworkingSockets()->CloseConnection(change->m_hConn, 0, "Endpoint unavailable", false);
 }
 
-se_status create(const se_game_options& options, se_game_handle& output)
+se_status create(const se_datagram_options& options, se_datagram_handle& output)
 {
     auto& state = runtime();
     std::lock_guard<std::mutex> lock(state.mutex);
@@ -97,24 +97,24 @@ se_status create(const se_game_options& options, se_game_handle& output)
     return SE_OK;
 }
 
-se_status listen(se_game_handle id, const char* address, uint32_t port)
+se_status listen(se_datagram_handle id, const char* address, uint32_t port)
 {
     return with_endpoint(id, [&](Endpoint& endpoint) { return endpoint.listen(address, port); });
 }
-se_status connect(se_game_handle id, const char* address, uint32_t port, uint64_t& peer)
+se_status connect(se_datagram_handle id, const char* address, uint32_t port, uint64_t& peer)
 {
     return with_endpoint(id, [&](Endpoint& endpoint) { return endpoint.connect(address, port, peer); });
 }
-se_status send(se_game_handle id, uint64_t peer, uint32_t delivery, const void* data, uint32_t size)
+se_status send(se_datagram_handle id, uint64_t peer, uint32_t delivery, const void* data, uint32_t size)
 {
     return with_endpoint(id, [&](Endpoint& endpoint) { return endpoint.send(peer, delivery, data, size); });
 }
-se_status disconnect(se_game_handle id, uint64_t peer)
+se_status disconnect(se_datagram_handle id, uint64_t peer)
 {
     return with_endpoint(id, [&](Endpoint& endpoint) { return endpoint.disconnect(peer); });
 }
 
-se_status poll(se_game_handle id, se_game_event& event, void* payload,
+se_status poll(se_datagram_handle id, se_datagram_event& event, void* payload,
     uint32_t capacity, uint32_t timeout_ms)
 {
     auto& state = runtime();
@@ -138,7 +138,7 @@ se_status poll(se_game_handle id, se_game_event& event, void* payload,
     }
 }
 
-se_status destroy(se_game_handle id)
+se_status destroy(se_datagram_handle id)
 {
     auto& state = runtime();
     std::lock_guard<std::mutex> lock(state.mutex);
@@ -151,4 +151,4 @@ se_status destroy(se_game_handle id)
     return SE_OK;
 }
 
-} // namespace serverengine::net::game
+} // namespace serverengine::net::gns

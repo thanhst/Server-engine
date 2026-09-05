@@ -3,7 +3,7 @@
 #include <cstring>
 #include <memory>
 
-namespace serverengine::net::game {
+namespace serverengine::net::gns {
 
 void Endpoint::overflow() noexcept
 {
@@ -11,10 +11,10 @@ void Endpoint::overflow() noexcept
     shutdown(); // Do not keep a partial OPEN/MESSAGE/CLOSE history.
 }
 
-bool Endpoint::push(se_game_event event, const void* data, uint32_t size) noexcept
+bool Endpoint::push(se_datagram_event event, const void* data, uint32_t size) noexcept
 {
     if (stopped_) return false;
-    const auto cost = uint64_t(sizeof(se_game_event)) + size;
+    const auto cost = uint64_t(sizeof(se_datagram_event)) + size;
     if (events_.size() >= options_.max_event_queue_count || cost > options_.max_event_queue_bytes - event_bytes_) {
         overflow();
         return false;
@@ -32,12 +32,12 @@ bool Endpoint::push(se_game_event event, const void* data, uint32_t size) noexce
     } catch (...) { overflow(); return false; }
 }
 
-se_status Endpoint::take(se_game_event& event, void* payload, uint32_t capacity)
+se_status Endpoint::take(se_datagram_event& event, void* payload, uint32_t capacity)
 {
     if (overflow_ && !overflow_reported_) {
         overflow_reported_ = true;
         event = empty_event();
-        event.kind = SE_GAME_OVERFLOW;
+        event.kind = SE_DATAGRAM_OVERFLOW;
         return SE_OK;
     }
     if (stopped_) return SE_STOPPED;
@@ -46,7 +46,7 @@ se_status Endpoint::take(se_game_event& event, void* payload, uint32_t capacity)
     event = queued.metadata;
     if (queued.bytes.size() > capacity) return SE_BUFFER_TOO_SMALL;
     if (!queued.bytes.empty()) std::memcpy(payload, queued.bytes.data(), queued.bytes.size());
-    event_bytes_ -= sizeof(se_game_event) + queued.bytes.size();
+    event_bytes_ -= sizeof(se_datagram_event) + queued.bytes.size();
     events_.pop_front();
     return SE_OK;
 }
@@ -56,7 +56,7 @@ void Endpoint::drop(HSteamNetConnection native, int reason, const char* message)
     const auto found = peers_.find(native);
     if (found == peers_.end()) return;
     auto event = empty_event();
-    event.kind = SE_GAME_DISCONNECTED;
+    event.kind = SE_DATAGRAM_DISCONNECTED;
     event.peer_id = found->second.id;
     event.reason = reason;
     // Diagnostics supplied here are local constants, not peer-controlled payloads.
@@ -79,7 +79,7 @@ void Endpoint::on_status(const SteamNetConnectionStatusChangedCallback_t& change
         auto found = peers_.find(change.m_hConn);
         if (change.m_info.m_eState == k_ESteamNetworkingConnectionState_Connecting && found == peers_.end()) {
             if (stopped_ || peers_.size() >= options_.max_peers ||
-                (!(options_.flags & SE_GAME_ALLOW_REMOTE_UNAUTHENTICATED) && !change.m_info.m_addrRemote.IsLocalHost())) {
+                (!(options_.flags & SE_DATAGRAM_ALLOW_REMOTE_UNAUTHENTICATED) && !change.m_info.m_addrRemote.IsLocalHost())) {
                 api_->CloseConnection(change.m_hConn, 0, "Admission rejected", false);
                 return;
             }
@@ -103,7 +103,7 @@ void Endpoint::on_status(const SteamNetConnectionStatusChangedCallback_t& change
             if (!found->second.connected) {
                 found->second.connected = true;
                 auto event = empty_event();
-                event.kind = SE_GAME_CONNECTED;
+                event.kind = SE_DATAGRAM_CONNECTED;
                 event.peer_id = found->second.id;
                 push(event);
             }
@@ -137,11 +137,11 @@ void Endpoint::receive()
         // RunCallbacks is pumped before receive; do not deliver MESSAGE before OPEN.
         if (!found->second.connected) { drop(raw->m_conn, 0, "Message before connected event"); continue; }
         auto event = empty_event();
-        event.kind = SE_GAME_MESSAGE;
+        event.kind = SE_DATAGRAM_MESSAGE;
         event.peer_id = found->second.id;
-        event.delivery = raw->m_nFlags & k_nSteamNetworkingSend_Reliable ? SE_GAME_RELIABLE_ORDERED : SE_GAME_UNRELIABLE;
+        event.delivery = raw->m_nFlags & k_nSteamNetworkingSend_Reliable ? SE_DATAGRAM_RELIABLE_ORDERED : SE_DATAGRAM_UNRELIABLE;
         push(event, raw->m_pData, uint32_t(raw->m_cbSize));
     }
 }
 
-} // namespace serverengine::net::game
+} // namespace serverengine::net::gns

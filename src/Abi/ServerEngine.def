@@ -45,3 +45,13 @@ EXPORTS
     se_game_poll
     se_game_disconnect
     se_game_destroy
+    se_datagram_get_abi_version
+    se_datagram_options_init
+    se_datagram_event_init
+    se_datagram_create
+    se_datagram_listen
+    se_datagram_connect
+    se_datagram_send
+    se_datagram_poll
+    se_datagram_disconnect
+    se_datagram_destroy

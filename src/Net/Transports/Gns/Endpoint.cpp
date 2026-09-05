@@ -2,7 +2,7 @@
 #include <algorithm>
 #include <stdexcept>
 
-namespace serverengine::net::game {
+namespace serverengine::net::gns {
 namespace {
 // Close an unpublished native connection if allocation/configuration fails.
 struct PendingConnection {
@@ -15,7 +15,7 @@ struct PendingConnection {
 };
 }
 
-Endpoint::Endpoint(se_game_handle id, const se_game_options& options)
+Endpoint::Endpoint(se_datagram_handle id, const se_datagram_options& options)
     : id_(id), options_(options), api_(SteamNetworkingSockets())
 {
     group_ = api_->CreatePollGroup();
@@ -32,7 +32,7 @@ se_status Endpoint::listen(const char* address, uint32_t port)
 {
     if (stopped_) return SE_STOPPED;
     SteamNetworkingIPAddr native;
-    if (!parse_address(address, port, options_.flags & SE_GAME_ALLOW_REMOTE_UNAUTHENTICATED, native))
+    if (!parse_address(address, port, options_.flags & SE_DATAGRAM_ALLOW_REMOTE_UNAUTHENTICATED, native))
         return SE_INVALID_ARGUMENT;
     if (listener_ != k_HSteamListenSocket_Invalid) return SE_INVALID_STATE;
     NativeConfig config(options_, id_, status_changed);
@@ -50,7 +50,7 @@ se_status Endpoint::connect(const char* address, uint32_t port, uint64_t& peer)
 {
     if (stopped_) return SE_STOPPED;
     SteamNetworkingIPAddr native;
-    if (!parse_address(address, port, options_.flags & SE_GAME_ALLOW_REMOTE_UNAUTHENTICATED, native))
+    if (!parse_address(address, port, options_.flags & SE_DATAGRAM_ALLOW_REMOTE_UNAUTHENTICATED, native))
         return SE_INVALID_ARGUMENT;
     if (peers_.size() >= options_.max_peers) return SE_BACKPRESSURE;
     NativeConfig config(options_, id_, status_changed);
@@ -73,7 +73,7 @@ se_status Endpoint::send(uint64_t peer, uint32_t delivery, const void* data, uin
     const auto found = find_peer(peer);
     if (found == peers_.end()) return SE_INVALID_HANDLE;
     if (!found->second.connected) return SE_INVALID_STATE;
-    const int flags = delivery == SE_GAME_RELIABLE_ORDERED ?
+    const int flags = delivery == SE_DATAGRAM_RELIABLE_ORDERED ?
         k_nSteamNetworkingSend_ReliableNoNagle : k_nSteamNetworkingSend_UnreliableNoNagle;
     const unsigned char empty = 0;
     const auto result = api_->SendMessageToConnection(found->first, size ? data : &empty, size, flags, nullptr);
@@ -114,4 +114,4 @@ void Endpoint::shutdown() noexcept
     event_bytes_ = 0;
 }
 
-} // namespace serverengine::net::game
+} // namespace serverengine::net::gns

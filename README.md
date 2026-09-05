@@ -13,7 +13,7 @@ HTTPS → SQL → JSON, hoặc [audio/video](docs/audio-video.md) để hiểu s
 | --- | --- |
 | TCP binary | Frame độ dài 4 byte big-endian, hỗ trợ TLS 1.3 |
 | UDP | Datagram, peer theo địa chỉ/port, plaintext phải chọn rõ |
-| Game UDP (tùy chọn) | GNS reliable/unreliable, SDK server/client; mã hóa, mặc định loopback, chưa xác minh peer |
+| Datagram Transport (tùy chọn) | GNS UDP reliable/unreliable dùng chung cho client/server; mã hóa, mặc định loopback, chưa xác minh peer |
 | WebSocket | Message binary, WS hoặc WSS/TLS 1.3, path cấu hình |
 | HTTP/HTTPS | HTTP/1.1 request/response, keepalive, binary body có giới hạn; route ở host |
 | ECC | ECDHE và chứng chỉ EC trong TLS; AEAD do OpenSSL thực hiện |
@@ -27,11 +27,15 @@ Có [host game mẫu](examples/GameServer/main.cpp) chỉ dùng C ABI và
 [client trình duyệt](examples/WebClient/index.html) dùng WSS.
 Có thêm [host web/media](examples/WebServer/main.cpp) với C++ wrapper trên C ABI.
 Để dùng **UDP tin cậy/không tin cậy và client native**, đọc
-[Game Transport](docs/game-transport.md). Preset `vs2022-x64-game` bật module này;
+[Datagram Transport](docs/datagram-transport.md). Preset `vs2022-x64-datagram` bật module này;
 source mới chưa được build/chạy kiểm chứng trong lượt triển khai.
 
 Luồng chính mới:
 `Host → C ABI → ServerHost → TransportService → TCP / UDP / WebSocket / HTTP`.
+
+Với datagram reliable/unreliable, đường gọi riêng là
+`Ứng dụng → se_datagram_* → Net/Transports/Gns → UDP`.
+Logic game/web nằm trong ứng dụng; các phần network được chia theo cách truyền.
 Data đi theo đường độc lập: `Host → C ABI → SQL/Redis service → driver`.
 Boost.Asio/Beast và OpenSSL đảm nhiệm giao thức mạng/TLS đã có chuẩn; code riêng
 giữ việc quản lý vòng đời, giới hạn tài nguyên và chuyển sự kiện đến host.

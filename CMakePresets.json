@@ -47,12 +47,17 @@
       }
     },
     {
-      "name": "vs2022-x64-game",
-      "displayName": "ServerEngine game UDP + native client/server (x64)",
+      "name": "vs2022-x64-datagram",
+      "displayName": "ServerEngine GNS datagrams + native client/server (x64)",
       "inherits": "vs2022-x64-dll",
       "cacheVariables": {
-        "SE_WITH_GAME_TRANSPORT": "ON"
+        "SE_WITH_GNS": "ON"
       }
+    },
+    {
+      "name": "vs2022-x64-game",
+      "displayName": "Compatibility preset; prefer vs2022-x64-datagram",
+      "inherits": "vs2022-x64-datagram"
     }
   ],
   "buildPresets": [
@@ -94,6 +99,16 @@
     {
       "name": "vs2022-x86-dll-release",
       "configurePreset": "vs2022-x86-dll",
+      "configuration": "Release"
+    },
+    {
+      "name": "vs2022-x64-datagram-debug",
+      "configurePreset": "vs2022-x64-datagram",
+      "configuration": "Debug"
+    },
+    {
+      "name": "vs2022-x64-datagram-release",
+      "configurePreset": "vs2022-x64-datagram",
       "configuration": "Release"
     },
     {

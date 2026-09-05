@@ -4,6 +4,13 @@ Phần Network bên dưới hiện có thêm HTTP/HTTPS. Data SQL/Redis có vòn
 queue riêng, xem [kiến trúc hai module](network-and-data.md) và
 [hợp đồng Data](data-services.md). Schema/query nghiệp vụ vẫn nằm trong host.
 
+Với UDP có chế độ reliable/unreliable, xem
+[Datagram Transport](datagram-transport.md). Đường gọi là
+`Ứng dụng → se_datagram_* → Net/Transports/Gns → GameNetworkingSockets`.
+Backend GNS được link tĩnh vào cùng DLL và phục vụ cả client lẫn server.
+Tên thư mục dựa trên transport; xử lý gameplay vẫn ở ứng dụng. Các phần
+`ServerHost`/`TransportService` dưới đây mô tả nhánh `se_server_*` hiện có.
+
 ```mermaid
 flowchart LR
     Game[Logic game / web realtime] --> ABI[C ABI]
@@ -30,6 +37,7 @@ flowchart LR
 | TCP binary framing | `src/Net/Async/TcpConnection.h` |
 | Handshake/frame WebSocket | `src/Net/Async/WebSocketConnection.h` |
 | UDP peer/datagram/idle | `src/Net/Async/UdpListener.*`, `UdpPeer.*` |
+| Datagram reliable/unreliable | `include/ServerEngine/C/DatagramTransport.h`, `src/Net/Transports/Gns/` |
 | Lệnh game, tên hiển thị | `examples/GameServer/GameServer.cpp` |
 | Truy vấn SQL | `examples/GameServer/PlayerStore.cpp` |
 
@@ -106,8 +114,9 @@ vụ nền; copy dữ liệu mà job cần và kiểm tra session còn hợp l�
 Hướng distribution tiếp theo có thể là gateway → room owner → storage service.
 Trước khi code cần xác định node discovery, account/session identity, định tuyến
 shard, RPC timeout/retry, idempotency và chính sách khi node chết. Repo hiện chưa
-có cluster membership, outbound client ABI, replication hoặc transaction phân
-tán; không nên bật một cờ `distribution=true` rồi hiểu là đã có các bảo đảm đó.
+có cluster membership, replication hoặc transaction phân tán. `se_datagram_connect`
+đã có cho client GNS; nhánh `se_server_*` chưa có client TCP/HTTP đi ra.
+Không nên bật một cờ `distribution=true` rồi hiểu là đã có các bảo đảm đó.
 
 Một worker/handle giúp ownership dễ đọc trong phiên bản này. Có thể mở nhiều
 handle cho các shard độc lập; đây chưa phải bằng chứng scale tuyến tính. Khi

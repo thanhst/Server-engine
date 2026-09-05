@@ -1,4 +1,4 @@
-#include <ServerEngine/Cpp/GameTransport.h>
+#include <ServerEngine/Cpp/DatagramTransport.h>
 
 #include <atomic>
 #include <charconv>
@@ -12,9 +12,9 @@
 
 namespace {
 using Clock = std::chrono::steady_clock;
-using serverengine::sdk::GameDelivery;
-using serverengine::sdk::GameEndpoint;
-using serverengine::sdk::GameEvent;
+using serverengine::sdk::DatagramDelivery;
+using serverengine::sdk::DatagramEndpoint;
+using serverengine::sdk::DatagramEvent;
 std::atomic_bool stop_requested{false};
 static_assert(std::atomic_bool::is_always_lock_free, "Signal flag must be lock-free");
 void request_stop(int) { stop_requested.store(true, std::memory_order_relaxed); }
@@ -30,33 +30,33 @@ bool snapshot_number(std::string_view message, std::uint64_t& sequence)
 
 void server(std::uint32_t port)
 {
-    auto options = GameEndpoint::default_options();
+    auto options = DatagramEndpoint::default_options();
     options.max_message_bytes = 4096;
-    GameEndpoint endpoint(options);
+    DatagramEndpoint endpoint(options);
     endpoint.listen(port);
     std::unordered_map<std::uint64_t, std::uint64_t> snapshots;
-    std::cout << "Game transport server: 127.0.0.1:" << port << ". Ctrl+C to stop.\n";
+    std::cout << "Datagram transport server: 127.0.0.1:" << port << ". Ctrl+C to stop.\n";
     while (!stop_requested.load(std::memory_order_relaxed)) {
-        GameEvent event;
+        DatagramEvent event;
         const auto status = endpoint.poll(event, 20);
         if (status == SE_TIMEOUT) continue;
         if (status == SE_STOPPED) break;
         const auto& meta = event.metadata;
-        if (meta.kind == SE_GAME_CONNECTED) {
+        if (meta.kind == SE_DATAGRAM_CONNECTED) {
             snapshots.emplace(meta.peer_id, 0);
             std::cout << "CONNECTED peer=" << meta.peer_id << '\n';
-        } else if (meta.kind == SE_GAME_DISCONNECTED) {
+        } else if (meta.kind == SE_DATAGRAM_DISCONNECTED) {
             snapshots.erase(meta.peer_id);
             std::cout << "DISCONNECTED peer=" << meta.peer_id << " reason=" << meta.reason << '\n';
-        } else if (meta.kind == SE_GAME_OVERFLOW) {
-            throw std::runtime_error("Game event overflow; recreate endpoint");
-        } else if (meta.kind == SE_GAME_MESSAGE) {
-            if (meta.delivery == SE_GAME_RELIABLE_ORDERED && event.bytes() == "PING") {
-                if (endpoint.send(meta.peer_id, GameDelivery::ReliableOrdered, "PONG") != SE_OK) {
+        } else if (meta.kind == SE_DATAGRAM_OVERFLOW) {
+            throw std::runtime_error("Datagram event overflow; recreate endpoint");
+        } else if (meta.kind == SE_DATAGRAM_MESSAGE) {
+            if (meta.delivery == SE_DATAGRAM_RELIABLE_ORDERED && event.bytes() == "PING") {
+                if (endpoint.send(meta.peer_id, DatagramDelivery::ReliableOrdered, "PONG") != SE_OK) {
                     std::cerr << "PONG queue full; disconnect slow peer=" << meta.peer_id << '\n';
                     endpoint.disconnect(meta.peer_id);
                 }
-            } else if (meta.delivery == SE_GAME_UNRELIABLE) {
+            } else if (meta.delivery == SE_DATAGRAM_UNRELIABLE) {
                 std::uint64_t sequence{};
                 auto found = snapshots.find(meta.peer_id);
                 if (found != snapshots.end() && snapshot_number(event.bytes(), sequence) && sequence > found->second) {
@@ -64,7 +64,7 @@ void server(std::uint32_t port)
                     // Unreliable transport itself promises no ordering or delivery.
                     found->second = sequence;
                     std::cout << "SNAP peer=" << meta.peer_id << " sequence=" << sequence << '\n';
-                    endpoint.send(meta.peer_id, GameDelivery::Unreliable, event.bytes());
+                    endpoint.send(meta.peer_id, DatagramDelivery::Unreliable, event.bytes());
                 }
             }
         }
@@ -73,7 +73,7 @@ void server(std::uint32_t port)
 
 void client(std::uint32_t port)
 {
-    GameEndpoint endpoint;
+    DatagramEndpoint endpoint;
     const auto peer = endpoint.connect(port);
     const auto deadline = Clock::now() + std::chrono::seconds(10);
     auto next_snapshot = Clock::now();
@@ -81,22 +81,22 @@ void client(std::uint32_t port)
     std::uint64_t next_sequence = 1, newest_snapshot = 0;
     std::cout << "Connecting to 127.0.0.1:" << port << " (10-second demonstration)...\n";
     while (!stop_requested.load(std::memory_order_relaxed) && Clock::now() < deadline) {
-        GameEvent event;
+        DatagramEvent event;
         const auto status = endpoint.poll(event, 10);
         if (status == SE_STOPPED) break;
         if (status == SE_OK) {
-            if (event.metadata.kind == SE_GAME_CONNECTED) connected = true;
-            else if (event.metadata.kind == SE_GAME_DISCONNECTED)
+            if (event.metadata.kind == SE_DATAGRAM_CONNECTED) connected = true;
+            else if (event.metadata.kind == SE_DATAGRAM_DISCONNECTED)
                 throw std::runtime_error("Peer disconnected: " + std::string(event.metadata.message));
-            else if (event.metadata.kind == SE_GAME_OVERFLOW)
-                throw std::runtime_error("Game event overflow; recreate endpoint");
-            else if (event.metadata.kind == SE_GAME_MESSAGE) {
-                if (event.metadata.delivery == SE_GAME_RELIABLE_ORDERED && event.bytes() == "PONG") {
+            else if (event.metadata.kind == SE_DATAGRAM_OVERFLOW)
+                throw std::runtime_error("Datagram event overflow; recreate endpoint");
+            else if (event.metadata.kind == SE_DATAGRAM_MESSAGE) {
+                if (event.metadata.delivery == SE_DATAGRAM_RELIABLE_ORDERED && event.bytes() == "PONG") {
                     pong_received = true;
                     std::cout << "Reliable reply: PONG\n";
                 }
                 std::uint64_t sequence{};
-                if (event.metadata.delivery == SE_GAME_UNRELIABLE && snapshot_number(event.bytes(), sequence)
+                if (event.metadata.delivery == SE_DATAGRAM_UNRELIABLE && snapshot_number(event.bytes(), sequence)
                     && sequence > newest_snapshot) {
                     newest_snapshot = sequence;
                     std::cout << "Unreliable snapshot echo: " << sequence << '\n';
@@ -105,9 +105,9 @@ void client(std::uint32_t port)
         }
         if (!connected) continue;
         if (!ping_queued)
-            ping_queued = endpoint.send(peer, GameDelivery::ReliableOrdered, "PING") == SE_OK;
+            ping_queued = endpoint.send(peer, DatagramDelivery::ReliableOrdered, "PING") == SE_OK;
         if (next_sequence <= 20 && Clock::now() >= next_snapshot) {
-            endpoint.send(peer, GameDelivery::Unreliable, "SNAP " + std::to_string(next_sequence++));
+            endpoint.send(peer, DatagramDelivery::Unreliable, "SNAP " + std::to_string(next_sequence++));
             next_snapshot = Clock::now() + std::chrono::milliseconds(50);
         }
         if (pong_received && next_sequence > 20 && newest_snapshot != 0) break;
@@ -123,7 +123,7 @@ void client(std::uint32_t port)
 int main(int argc, char** argv)
 {
     if (argc != 3 || (std::string_view(argv[1]) != "--server" && std::string_view(argv[1]) != "--client")) {
-        std::cerr << "Usage: ServerEngineGameTransportExample --server PORT | --client PORT\n"
+        std::cerr << "Usage: ServerEngineDatagramTransportExample --server PORT | --client PORT\n"
                      "Run the two roles in separate terminals. Loopback only; protocol differs from raw UDP.\n";
         return 2;
     }
@@ -139,13 +139,13 @@ int main(int argc, char** argv)
     try {
         if (std::string_view(argv[1]) == "--server") server(port); else client(port);
         return 0;
-    } catch (const serverengine::sdk::GameTransportError& error) {
+    } catch (const serverengine::sdk::DatagramTransportError& error) {
         if (error.status() == SE_NOT_SUPPORTED)
-            std::cerr << "Game transport is disabled; build the DLL with SE_WITH_GAME_TRANSPORT=ON.\n";
-        else std::cerr << "Game transport: " << error.what() << '\n';
+            std::cerr << "Datagram transport is disabled; build the DLL with SE_WITH_GNS=ON.\n";
+        else std::cerr << "Datagram transport: " << error.what() << '\n';
         return 1;
     } catch (const std::exception& error) {
-        std::cerr << "Game example: " << error.what() << '\n';
+        std::cerr << "Datagram example: " << error.what() << '\n';
         return 1;
     }
 }

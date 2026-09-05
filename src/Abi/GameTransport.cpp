@@ -1,133 +1,27 @@
-#include "Boundary.h"
-#include "Net/Game/Api.h"
-#include "Net/Game/Options.h"
+#include <ServerEngine/C/GameTransport.h>
 
-namespace {
-namespace game = serverengine::net::game;
-const char* description(se_status status)
-{
-    switch (status) {
-    case SE_NOT_SUPPORTED: return "Game transport disabled; configure SE_WITH_GAME_TRANSPORT=ON";
-    case SE_INVALID_ARGUMENT: return "Invalid game transport argument, ABI layout, address or limit";
-    case SE_INVALID_HANDLE: return "Unknown game endpoint or peer handle";
-    case SE_INVALID_STATE: return "Game peer not connected or endpoint already listening";
-    case SE_BACKPRESSURE: return "Game capacity full; message not accepted, poll and retry later";
-    case SE_RESULT_TOO_LARGE: return "Game message exceeds endpoint limit";
-    case SE_IO_ERROR: return "GNS could not open/configure transport; check address, port and dependency version";
-    default: return "Game transport internal failure";
-    }
-}
-template<class Function>
-se_status boundary(se_error* error, Function operation)
-{
-    return serverengine::abi::protect(error, [&] {
-        const auto status = operation();
-        return status < 0 ? serverengine::abi::fail(error, status, description(status)) : status;
-    });
-}
-}
-
-uint32_t SE_CALL se_game_get_abi_version(void) { return SE_GAME_ABI_VERSION; }
+// Keep the published v1 symbols for existing binaries. All behavior lives in
+// DatagramTransport.cpp, so old and new callers share handles, queues and errors.
+uint32_t SE_CALL se_game_get_abi_version(void)
+{ return se_datagram_get_abi_version(); }
 void SE_CALL se_game_options_init(se_game_options* options)
-{
-    if (!options) return;
-    *options = {};
-    options->struct_size = sizeof(*options);
-    options->abi_version = SE_GAME_ABI_VERSION;
-    options->max_peers = 64;
-    options->max_message_bytes = 64 * 1024;
-    options->max_send_queue_bytes = 256 * 1024;
-    options->max_event_queue_count = 4096;
-    options->max_event_queue_bytes = 8 * 1024 * 1024;
-    options->connect_timeout_ms = 10000;
-}
-void SE_CALL se_game_event_init(se_game_event* event) { if (event) *event = game::empty_event(); }
-
+{ se_datagram_options_init(options); }
+void SE_CALL se_game_event_init(se_game_event* event)
+{ se_datagram_event_init(event); }
 se_status SE_CALL se_game_create(const se_game_options* options, se_game_handle* endpoint, se_error* error)
-{
-    if (endpoint) *endpoint = 0;
-    return boundary(error, [&]() -> se_status {
-        if (!endpoint || !game::valid_options(options)) return SE_INVALID_ARGUMENT;
-#ifdef SERVERENGINE_WITH_GAME_TRANSPORT
-        return game::create(*options, *endpoint);
-#else
-        return SE_NOT_SUPPORTED;
-#endif
-    });
-}
+{ return se_datagram_create(options, endpoint, error); }
 se_status SE_CALL se_game_listen(se_game_handle endpoint, const char* address, uint32_t port, se_error* error)
-{
-    return boundary(error, [&]() -> se_status {
-#ifdef SERVERENGINE_WITH_GAME_TRANSPORT
-        return game::listen(endpoint, address, port);
-#else
-        (void)endpoint; (void)address; (void)port;
-        return SE_NOT_SUPPORTED;
-#endif
-    });
-}
+{ return se_datagram_listen(endpoint, address, port, error); }
 se_status SE_CALL se_game_connect(se_game_handle endpoint, const char* address, uint32_t port,
     uint64_t* peer, se_error* error)
-{
-    if (peer) *peer = 0;
-    return boundary(error, [&]() -> se_status {
-        if (!peer) return SE_INVALID_ARGUMENT;
-#ifdef SERVERENGINE_WITH_GAME_TRANSPORT
-        return game::connect(endpoint, address, port, *peer);
-#else
-        (void)endpoint; (void)address; (void)port;
-        return SE_NOT_SUPPORTED;
-#endif
-    });
-}
+{ return se_datagram_connect(endpoint, address, port, peer, error); }
 se_status SE_CALL se_game_send(se_game_handle endpoint, uint64_t peer, uint32_t delivery,
     const void* data, uint32_t size, se_error* error)
-{
-    return boundary(error, [&]() -> se_status {
-        if ((!data && size) || (delivery != SE_GAME_UNRELIABLE && delivery != SE_GAME_RELIABLE_ORDERED))
-            return SE_INVALID_ARGUMENT;
-#ifdef SERVERENGINE_WITH_GAME_TRANSPORT
-        return game::send(endpoint, peer, delivery, data, size);
-#else
-        (void)endpoint; (void)peer;
-        return SE_NOT_SUPPORTED;
-#endif
-    });
-}
+{ return se_datagram_send(endpoint, peer, delivery, data, size, error); }
 se_status SE_CALL se_game_poll(se_game_handle endpoint, se_game_event* event,
     void* payload, uint32_t capacity, uint32_t timeout_ms, se_error* error)
-{
-    return boundary(error, [&]() -> se_status {
-        if (!event || event->struct_size != sizeof(*event) || event->abi_version != SE_GAME_ABI_VERSION ||
-            (!payload && capacity)) return SE_INVALID_ARGUMENT;
-        *event = game::empty_event();
-#ifdef SERVERENGINE_WITH_GAME_TRANSPORT
-        return game::poll(endpoint, *event, payload, capacity, timeout_ms);
-#else
-        (void)endpoint; (void)timeout_ms;
-        return SE_NOT_SUPPORTED;
-#endif
-    });
-}
+{ return se_datagram_poll(endpoint, event, payload, capacity, timeout_ms, error); }
 se_status SE_CALL se_game_disconnect(se_game_handle endpoint, uint64_t peer, se_error* error)
-{
-    return boundary(error, [&]() -> se_status {
-#ifdef SERVERENGINE_WITH_GAME_TRANSPORT
-        return game::disconnect(endpoint, peer);
-#else
-        (void)endpoint; (void)peer;
-        return SE_NOT_SUPPORTED;
-#endif
-    });
-}
+{ return se_datagram_disconnect(endpoint, peer, error); }
 se_status SE_CALL se_game_destroy(se_game_handle endpoint, se_error* error)
-{
-    return boundary(error, [&]() -> se_status {
-#ifdef SERVERENGINE_WITH_GAME_TRANSPORT
-        return game::destroy(endpoint);
-#else
-        (void)endpoint;
-        return SE_NOT_SUPPORTED;
-#endif
-    });
-}
+{ return se_datagram_destroy(endpoint, error); }

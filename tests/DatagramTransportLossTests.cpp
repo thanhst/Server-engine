@@ -1,4 +1,4 @@
-#include <ServerEngine/C/GameTransport.h>
+#include <ServerEngine/C/DatagramTransport.h>
 #include <boost/asio.hpp>
 
 #include <array>
@@ -99,8 +99,8 @@ private:
 };
 
 struct Endpoint {
-    se_game_handle value{};
-    ~Endpoint() { if (value) se_game_destroy(value, nullptr); }
+    se_datagram_handle value{};
+    ~Endpoint() { if (value) se_datagram_destroy(value, nullptr); }
 };
 
 std::array<unsigned char, 2048> packet(unsigned sequence) {
@@ -117,27 +117,27 @@ std::array<unsigned char, 2048> packet(unsigned sequence) {
 
 int main() {
     try {
-        check(se_game_get_abi_version() == SE_GAME_ABI_VERSION, "ABI mismatch");
-        se_game_options options;
-        se_game_options_init(&options);
+        check(se_datagram_get_abi_version() == SE_DATAGRAM_ABI_VERSION, "ABI mismatch");
+        se_datagram_options options;
+        se_datagram_options_init(&options);
         options.max_peers = 2;
         options.max_message_bytes = 4096;
         options.max_send_queue_bytes = 65536;
         Endpoint server, client;
-        const auto status = se_game_create(&options, &server.value, nullptr);
+        const auto status = se_datagram_create(&options, &server.value, nullptr);
         if (status == SE_NOT_SUPPORTED) return 77;
         check(status == SE_OK, "Server create failed");
-        check(se_game_create(&options, &client.value, nullptr) == SE_OK, "Client create failed");
+        check(se_datagram_create(&options, &client.value, nullptr) == SE_OK, "Client create failed");
         unsigned short port = 0;
         const auto seed = static_cast<unsigned>(Clock::now().time_since_epoch().count()) % 16000;
         for (unsigned attempt = 0; attempt < 100 && !port; ++attempt) {
             const auto candidate = static_cast<unsigned short>(20000 + (seed + attempt) % 16000);
-            if (se_game_listen(server.value, "127.0.0.1", candidate, nullptr) == SE_OK) port = candidate;
+            if (se_datagram_listen(server.value, "127.0.0.1", candidate, nullptr) == SE_OK) port = candidate;
         }
         check(port != 0, "Could not bind a server port");
         ImpairedPath path(port);
         std::uint64_t client_peer = 0, server_peer = 0;
-        check(se_game_connect(client.value, "127.0.0.1", path.port(), &client_peer, nullptr) == SE_OK,
+        check(se_datagram_connect(client.value, "127.0.0.1", path.port(), &client_peer, nullptr) == SE_OK,
             "Connect initiation failed");
         bool connected = false, received_done = false, sent_done = false;
         unsigned sent = 0, received = 0;
@@ -146,20 +146,20 @@ int main() {
         while (!received_done && Clock::now() < deadline) {
             for (const auto current : {server.value, client.value}) {
                 for (unsigned burst = 0; burst < 64; ++burst) {
-                    se_game_event event;
-                    se_game_event_init(&event);
+                    se_datagram_event event;
+                    se_datagram_event_init(&event);
                     std::array<unsigned char, 4096> payload{};
-                    const auto polled = se_game_poll(current, &event, payload.data(),
+                    const auto polled = se_datagram_poll(current, &event, payload.data(),
                         static_cast<std::uint32_t>(payload.size()), 0, nullptr);
                     if (polled == SE_TIMEOUT) break;
                     check(polled == SE_OK, "Poll failed under packet loss");
-                    check(event.kind != SE_GAME_OVERFLOW && event.kind != SE_GAME_DISCONNECTED,
+                    check(event.kind != SE_DATAGRAM_OVERFLOW && event.kind != SE_DATAGRAM_DISCONNECTED,
                         "Unexpected overflow/disconnect under packet loss");
-                    if (event.kind == SE_GAME_CONNECTED) {
+                    if (event.kind == SE_DATAGRAM_CONNECTED) {
                         if (current == client.value) connected = true;
                         else server_peer = event.peer_id;
-                    } else if (event.kind == SE_GAME_MESSAGE) {
-                        check(event.delivery == SE_GAME_RELIABLE_ORDERED, "Reliable flag lost");
+                    } else if (event.kind == SE_DATAGRAM_MESSAGE) {
+                        check(event.delivery == SE_DATAGRAM_RELIABLE_ORDERED, "Reliable flag lost");
                         if (current == server.value) {
                             const auto expected = packet(received);
                             check(received < count && event.payload_size == expected.size() &&
@@ -176,14 +176,14 @@ int main() {
             }
             if (connected && sent < count) {
                 const auto message = packet(sent);
-                const auto outcome = se_game_send(client.value, client_peer, SE_GAME_RELIABLE_ORDERED,
+                const auto outcome = se_datagram_send(client.value, client_peer, SE_DATAGRAM_RELIABLE_ORDERED,
                     message.data(), static_cast<std::uint32_t>(message.size()), nullptr);
                 check(outcome == SE_OK || outcome == SE_BACKPRESSURE, "Reliable send failed");
                 if (outcome == SE_OK) ++sent;
             }
             if (received == count && !sent_done) {
-                const auto outcome = se_game_send(server.value, server_peer,
-                    SE_GAME_RELIABLE_ORDERED, "DONE", 4, nullptr);
+                const auto outcome = se_datagram_send(server.value, server_peer,
+                    SE_DATAGRAM_RELIABLE_ORDERED, "DONE", 4, nullptr);
                 check(outcome == SE_OK || outcome == SE_BACKPRESSURE, "Reply failed");
                 sent_done = outcome == SE_OK;
             }

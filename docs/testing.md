@@ -98,10 +98,10 @@ Nó cần server chạy riêng nên không được thêm vào CTest tự độn
 - Lặp connect/disconnect và quan sát thread/handle count; test hiện tại chưa
   đo rò rỉ, stress, thứ tự completion và các nhánh send từng phần của IOCP.
 
-## Module Game Transport mới
+## Module Datagram Transport mới
 
-Xem [Game Transport](game-transport.md) để build/test riêng server/client UDP
-tin cậy/không tin cậy. Các test có tiền tố `GameTransport`, gồm proxy gây mất,
+Xem [Datagram Transport](datagram-transport.md) để build/test riêng server/client UDP
+tin cậy/không tin cậy. Các test có tiền tố `DatagramTransport`, gồm proxy gây mất,
 lặp và đảo thứ tự datagram. Đây là source test mới, chưa chạy xác nhận. Phần
 smoke check dưới đây được thực hiện trước module này và không kiểm chứng nó.
 

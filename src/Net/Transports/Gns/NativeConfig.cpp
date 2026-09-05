@@ -3,9 +3,9 @@
 
 #include <steam/isteamnetworkingutils.h>
 
-namespace serverengine::net::game {
+namespace serverengine::net::gns {
 
-NativeConfig::NativeConfig(const se_game_options& options, uint64_t user_data,
+NativeConfig::NativeConfig(const se_datagram_options& options, uint64_t user_data,
     FnSteamNetConnectionStatusChanged callback)
 {
     values[0].SetInt32(k_ESteamNetworkingConfig_Unencrypted, 0);
@@ -65,4 +65,4 @@ bool parse_address(const char* text, uint32_t port, bool allow_remote,
     return true;
 }
 
-} // namespace serverengine::net::game
+} // namespace serverengine::net::gns
