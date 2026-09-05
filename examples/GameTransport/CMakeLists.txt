@@ -1,0 +1,6 @@
+add_executable(ServerEngineGameTransportExample main.cpp)
+target_link_libraries(ServerEngineGameTransportExample PRIVATE ServerEngineDll)
+serverengine_target_defaults(ServerEngineGameTransportExample)
+set_target_properties(ServerEngineGameTransportExample PROPERTIES
+    RUNTIME_OUTPUT_DIRECTORY ${PROJECT_BINARY_DIR}
+    VS_DEBUGGER_WORKING_DIRECTORY ${PROJECT_SOURCE_DIR})

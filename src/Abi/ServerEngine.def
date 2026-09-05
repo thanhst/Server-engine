@@ -35,3 +35,13 @@ EXPORTS
     se_redis_poll
     se_redis_stop
     se_redis_destroy
+    se_game_get_abi_version
+    se_game_options_init
+    se_game_event_init
+    se_game_create
+    se_game_listen
+    se_game_connect
+    se_game_send
+    se_game_poll
+    se_game_disconnect
+    se_game_destroy

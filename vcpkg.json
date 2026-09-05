@@ -1,12 +1,28 @@
 {
   "name": "serverengine",
-  "version-semver": "1.1.0",
+  "version-semver": "1.2.0",
   "builtin-baseline": "04a9d8e5212d01ee1dd9478eadd9caade4f8b0d4",
-  "dependencies": ["boost-asio", "boost-beast", "openssl", "sqlite3"],
+  "dependencies": [
+    "boost-asio",
+    "boost-beast",
+    "openssl",
+    "sqlite3"
+  ],
   "features": {
     "redis": {
       "description": "Optional Redis binary GET/SET/DELETE connector",
-      "dependencies": ["hiredis"]
+      "dependencies": [
+        "hiredis"
+      ]
+    },
+    "game-transport": {
+      "description": "Optional Valve GameNetworkingSockets reliable/unreliable UDP endpoints",
+      "dependencies": [
+        {
+          "name": "gamenetworkingsockets",
+          "default-features": false
+        }
+      ]
     }
   }
 }

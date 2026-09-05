@@ -45,6 +45,14 @@
         "SE_BUILD_DLL": "ON",
         "CMAKE_TOOLCHAIN_FILE": "$env{VCPKG_ROOT}/scripts/buildsystems/vcpkg.cmake"
       }
+    },
+    {
+      "name": "vs2022-x64-game",
+      "displayName": "ServerEngine game UDP + native client/server (x64)",
+      "inherits": "vs2022-x64-dll",
+      "cacheVariables": {
+        "SE_WITH_GAME_TRANSPORT": "ON"
+      }
     }
   ],
   "buildPresets": [
@@ -86,6 +94,16 @@
     {
       "name": "vs2022-x86-dll-release",
       "configurePreset": "vs2022-x86-dll",
+      "configuration": "Release"
+    },
+    {
+      "name": "vs2022-x64-game-debug",
+      "configurePreset": "vs2022-x64-game",
+      "configuration": "Debug"
+    },
+    {
+      "name": "vs2022-x64-game-release",
+      "configurePreset": "vs2022-x64-game",
       "configuration": "Release"
     }
   ]
