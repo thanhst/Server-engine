@@ -35,6 +35,13 @@ void invalid_options()
     options = GameEndpoint::default_options();
     options.max_peers = 0;
     check(se_game_create(&options, &output, nullptr) == SE_INVALID_ARGUMENT, "zero peer limit rejected");
+    options = GameEndpoint::default_options();
+    options.max_message_bytes = 63;
+    check(se_game_create(&options, &output, nullptr) == SE_INVALID_ARGUMENT, "native minimum message size enforced");
+    options = GameEndpoint::default_options();
+    options.max_message_bytes = 64;
+    options.max_send_queue_bytes = 4095;
+    check(se_game_create(&options, &output, nullptr) == SE_INVALID_ARGUMENT, "native minimum send budget enforced");
 }
 
 void disabled_contract()

@@ -14,7 +14,9 @@ uint32_t native_receive_bytes(const se_game_options& options) noexcept
 
 uint32_t native_receive_count(const se_game_options& options) noexcept
 {
-    return (std::min)(1024u, options.max_event_queue_count);
+    // GNS 1.6 requires at least two native receive slots, even if the host
+    // deliberately configures a one-event application queue for overflow tests.
+    return (std::max)(2u, (std::min)(1024u, options.max_event_queue_count));
 }
 
 bool valid_options(const se_game_options* options) noexcept
@@ -26,7 +28,8 @@ bool valid_options(const se_game_options* options) noexcept
             [](uint64_t value) { return value != 0; })) return false;
 
     if (options->max_peers == 0 || options->max_peers > 1024
-        || options->max_message_bytes == 0 || options->max_message_bytes > 512 * 1024
+        || options->max_message_bytes < 64 || options->max_message_bytes > 512 * 1024
+        || options->max_send_queue_bytes < 4096
         || options->max_send_queue_bytes < options->max_message_bytes
         || options->max_send_queue_bytes > 16 * 1024 * 1024
         || options->max_event_queue_count == 0 || options->max_event_queue_count > 65536

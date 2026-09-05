@@ -33,8 +33,8 @@ typedef struct se_game_options {
     uint32_t abi_version;
     uint32_t flags;
     uint32_t max_peers;
-    uint32_t max_message_bytes;
-    uint32_t max_send_queue_bytes; /* Per connection; includes reliable backlog. */
+    uint32_t max_message_bytes; /* From 64 bytes through 512 KiB. */
+    uint32_t max_send_queue_bytes; /* Per connection; >=4096 and >=max_message_bytes. */
     uint32_t max_event_queue_count;
     uint32_t connect_timeout_ms;
     uint64_t max_event_queue_bytes;
