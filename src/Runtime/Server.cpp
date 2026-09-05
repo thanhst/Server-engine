@@ -1,10 +1,10 @@
 #include <ServerEngine/Runtime/Server.h>
 
+#include "SessionRegistry.h"
+#include "TcpListener.h"
+
 #include <ServerEngine/Net/Endpoint.h>
-#include <ServerEngine/Net/ITcpServer.h>
 #include <ServerEngine/Net/TcpBackend.h>
-#include <ServerEngine/Net/TcpIocpServer.h>
-#include <ServerEngine/Net/TcpServer.h>
 #include <ServerEngine/Net/TransportKind.h>
 
 #include <exception>
@@ -16,6 +16,7 @@ Server::Server(ServerOptions options, IMessageHandler& handler, core::Logger& lo
     : options_(std::move(options))
     , handler_(handler)
     , logger_(logger)
+    , session_registry_(std::make_unique<detail::SessionRegistry>(hub_, options_.max_sessions))
 {
 }
 
@@ -67,89 +68,9 @@ bool Server::start(std::string* error_message)
             continue;
         }
 
-        std::unique_ptr<net::ITcpServer> tcp_server;
-        if (options_.tcp_backend == net::TcpBackend::Iocp) {
-            tcp_server = std::make_unique<net::TcpIocpServer>(logger_);
-        } else {
-            tcp_server = std::make_unique<net::TcpServer>(logger_);
-        }
-
-        auto* tcp_server_ptr = tcp_server.get();
-
-        net::TcpServerCallbacks callbacks;
-        callbacks.on_accepting = [this](net::ConnectionId connection_id, const net::Endpoint& remote_endpoint) {
-            if (hub_.count() >= options_.max_sessions) {
-                logger_.warning(
-                    "Connection rejected max_sessions reached connection=",
-                    connection_id,
-                    " remote=",
-                    net::to_string(remote_endpoint));
-                return false;
-            }
-
-            return true;
-        };
-
-        callbacks.on_connected = [this, transport = listener.transport, tcp_server_ptr](
-                                     net::ConnectionId connection_id,
-                                     const net::Endpoint& remote_endpoint) {
-            hub_.add_session(connection_id, transport, remote_endpoint);
-            Session session(
-                connection_id,
-                transport,
-                remote_endpoint,
-                [tcp_server_ptr, connection_id](SessionId, const core::Buffer& data, std::string* send_error) {
-                    return tcp_server_ptr->send(connection_id, data, send_error);
-                },
-                &hub_);
-            dispatch_session_started(session);
-        };
-
-        callbacks.on_message = [this, transport = listener.transport, tcp_server_ptr](
-                                   net::ConnectionId connection_id,
-                                   const net::Endpoint& remote_endpoint,
-                                   const core::Buffer& message) {
-            Session session(
-                connection_id,
-                transport,
-                remote_endpoint,
-                [tcp_server_ptr, connection_id](SessionId, const core::Buffer& data, std::string* send_error) {
-                    return tcp_server_ptr->send(connection_id, data, send_error);
-                },
-                &hub_);
-            dispatch_message(session, message);
-        };
-
-        callbacks.on_disconnected = [this, transport = listener.transport, tcp_server_ptr](
-                                        net::ConnectionId connection_id,
-                                        const net::Endpoint& remote_endpoint) {
-            Session session(
-                connection_id,
-                transport,
-                remote_endpoint,
-                [tcp_server_ptr, connection_id](SessionId, const core::Buffer& data, std::string* send_error) {
-                    return tcp_server_ptr->send(connection_id, data, send_error);
-                },
-                &hub_);
-            dispatch_session_stopped(session);
-            hub_.remove_session(connection_id);
-        };
-
-        callbacks.on_error = [this](std::string_view message) {
-            report_handler_error(message);
-        };
-
+        auto tcp_listener = std::make_unique<detail::TcpListener>(*this, *session_registry_, logger_, listener);
         std::string transport_error;
-        net::TcpServerOptions tcp_options;
-        tcp_options.bind_endpoint = listener.bind_endpoint;
-        tcp_options.worker_count = options_.worker_count;
-        tcp_options.max_connections = options_.max_sessions;
-        tcp_options.max_message_bytes = options_.max_message_bytes;
-        tcp_options.idle_timeout_ms = options_.idle_timeout_ms;
-        tcp_options.receive_timeout_ms = options_.receive_timeout_ms;
-        tcp_options.tcp_no_delay = options_.tcp_no_delay;
-
-        if (!tcp_server->start(tcp_options, std::move(callbacks), &transport_error)) {
+        if (!tcp_listener->start(&transport_error)) {
             stop();
             if (error_message != nullptr) {
                 *error_message = "failed to start listener '" + listener.name + "': " + transport_error;
@@ -167,7 +88,7 @@ bool Server::start(std::string* error_message)
             " endpoint=",
             net::to_string(listener.bind_endpoint));
 
-        tcp_servers_.push_back(std::move(tcp_server));
+        tcp_listeners_.push_back(std::move(tcp_listener));
     }
 
     return true;
@@ -180,10 +101,10 @@ void Server::stop()
     }
 
     running_ = false;
-    for (auto& tcp_server : tcp_servers_) {
-        tcp_server->stop();
+    for (auto& tcp_listener : tcp_listeners_) {
+        tcp_listener->stop();
     }
-    tcp_servers_.clear();
+    tcp_listeners_.clear();
 
     logger_.info("Runtime stopped");
 }

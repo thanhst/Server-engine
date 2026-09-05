@@ -7,6 +7,9 @@
 
 namespace serverengine::net {
 
+// Lifecycle calls belong to one owner thread. stop() joins transport threads;
+// do not invoke it from a transport callback. Callback state must live until
+// stop() returns. Raw transport callbacks must not let exceptions escape.
 class ITcpServer {
 public:
     virtual ~ITcpServer() = default;

@@ -1,10 +1,17 @@
-cmake_minimum_required(VERSION 3.20)
+cmake_minimum_required(VERSION 3.21)
 
 if(CMAKE_SOURCE_DIR STREQUAL CMAKE_BINARY_DIR)
     message(FATAL_ERROR "In-source builds are not supported. Use: cmake --preset vs2022-x64")
 endif()
 
-project(ServerEngine LANGUAGES CXX)
+
+project(ServerEngine VERSION 1.1.0 LANGUAGES C CXX)
+
+set(CMAKE_POSITION_INDEPENDENT_CODE ON)
+
+include(cmake/CompilerOptions.cmake)
+include(CTest)
+find_package(Threads REQUIRED)
 
 if(CMAKE_CONFIGURATION_TYPES)
     set(CMAKE_CONFIGURATION_TYPES "Debug;Release" CACHE STRING "" FORCE)
@@ -61,6 +68,25 @@ add_library(ServerEngineNet STATIC
     src/Net/TcpIocpServer.cpp
     src/Net/TcpServer.cpp
     src/Net/TransportKind.cpp
+    src/Net/Detail/LineFramer.h
+    src/Net/Threaded/TcpServerImpl.h
+    src/Net/Threaded/TcpServerImpl.cpp
+    src/Net/Threaded/ClientConnection.h
+    src/Net/Threaded/ClientConnection.cpp
+    src/Net/Threaded/SocketOperations.h
+    src/Net/Threaded/SocketOperations.cpp
+    src/Net/Iocp/WinSockSupport.h
+    src/Net/Iocp/WinSockSupport.cpp
+    src/Net/Iocp/CompletionPort.h
+    src/Net/Iocp/CompletionPort.cpp
+    src/Net/Iocp/Connection.h
+    src/Net/Iocp/Connection.cpp
+    src/Net/Iocp/Operation.h
+    src/Net/Iocp/Server.h
+    src/Net/Iocp/ServerLifecycle.cpp
+    src/Net/Iocp/ServerAccept.cpp
+    src/Net/Iocp/ServerIo.cpp
+    src/Net/Iocp/ServerConnections.cpp
 )
 
 target_include_directories(ServerEngineNet
@@ -72,6 +98,7 @@ target_link_libraries(ServerEngineNet
     PUBLIC
         ServerEngineCore
         ServerEnginePort
+        Threads::Threads
 )
 
 add_library(ServerEngineSecurity STATIC
@@ -102,6 +129,10 @@ add_library(ServerEngineRuntime STATIC
     src/Runtime/ConnectionHub.cpp
     src/Runtime/IMessageHandler.cpp
     src/Runtime/Server.cpp
+    src/Runtime/SessionRegistry.h
+    src/Runtime/SessionRegistry.cpp
+    src/Runtime/TcpListener.h
+    src/Runtime/TcpListener.cpp
     src/Runtime/Session.cpp
 )
 
@@ -117,52 +148,14 @@ target_link_libraries(ServerEngineRuntime
         ServerEngineSecurity
 )
 
-add_executable(ServerEngine
-    ServerEngine.cpp
-)
-
-add_executable(ServerEngineTcpTest
-    tests/test.cpp
-)
-
-target_link_libraries(ServerEngine
-    PRIVATE
-        ServerEngineRuntime
-        ServerEngineCore
-        ServerEngineNet
-        ServerEnginePort
-        ServerEngineSecurity
-)
-
-target_link_libraries(ServerEngineTcpTest
-    PRIVATE
-        ServerEnginePort
-)
-
-foreach(target_name IN ITEMS ServerEnginePort ServerEngineCore ServerEngineNet ServerEngineSecurity ServerEngineRuntime ServerEngine ServerEngineTcpTest)
-    target_compile_features(${target_name} PUBLIC cxx_std_17)
-    set_target_properties(${target_name} PROPERTIES CXX_EXTENSIONS OFF)
-
-    if(MSVC)
-        target_compile_definitions(${target_name} PRIVATE
-            UNICODE
-            _UNICODE
-            _CONSOLE
-            WIN32_LEAN_AND_MEAN
-            NOMINMAX
-            $<$<EQUAL:${CMAKE_SIZEOF_VOID_P},4>:WIN32>
-        )
-
-        target_compile_options(${target_name} PRIVATE
-            /W3
-            /permissive-
-            /sdl
-            $<$<CONFIG:Release>:/Gy>
-            $<$<CONFIG:Release>:/GL>
-            $<$<CONFIG:Release>:/Oi>
-        )
-    endif()
+foreach(target_name IN ITEMS ServerEnginePort ServerEngineCore ServerEngineNet ServerEngineSecurity ServerEngineRuntime)
+    serverengine_target_defaults(${target_name})
 endforeach()
+
+add_subdirectory(apps/EchoServer)
+if(BUILD_TESTING)
+    add_subdirectory(tests)
+endif()
 
 if(WIN32)
     target_link_libraries(ServerEnginePort
@@ -175,11 +168,5 @@ if(WIN32)
     )
 endif()
 
-if(MSVC)
-    target_link_options(ServerEngine PRIVATE
-        /SUBSYSTEM:CONSOLE
-        $<$<CONFIG:Release>:/LTCG>
-    )
-endif()
 
 set_property(DIRECTORY PROPERTY VS_STARTUP_PROJECT ServerEngine)

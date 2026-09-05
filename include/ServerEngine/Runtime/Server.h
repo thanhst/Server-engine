@@ -12,17 +12,20 @@
 #include <string>
 #include <vector>
 
-namespace serverengine::net {
-class ITcpServer;
-}
-
 namespace serverengine::runtime {
+
+namespace detail {
+class SessionRegistry;
+class TcpListener;
+}
 
 class Server final {
 public:
+    // handler and logger must outlive this server and all of its callbacks.
     Server(ServerOptions options, IMessageHandler& handler, core::Logger& logger);
     ~Server();
 
+    // Lifecycle calls are serialized by the caller, outside handler callbacks.
     [[nodiscard]] bool start(std::string* error_message = nullptr);
     void stop();
 
@@ -36,6 +39,8 @@ public:
     void dispatch_session_stopped(Session& session);
 
 private:
+    friend class detail::TcpListener;
+
     void report_handler_error(std::string_view message);
 
     ServerOptions options_;
@@ -43,7 +48,9 @@ private:
     core::Logger& logger_;
     std::atomic_bool running_{false};
     ConnectionHub hub_;
-    std::vector<std::unique_ptr<net::ITcpServer>> tcp_servers_;
+    // Listeners stop and release their sessions before the shared registry/hub.
+    std::unique_ptr<detail::SessionRegistry> session_registry_;
+    std::vector<std::unique_ptr<detail::TcpListener>> tcp_listeners_;
 };
 
 } // namespace serverengine::runtime

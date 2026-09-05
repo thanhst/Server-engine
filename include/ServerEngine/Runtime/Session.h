@@ -15,6 +15,8 @@ using SessionId = std::uint64_t;
 
 class ConnectionHub;
 
+// A callback-scoped view of a connection. The send function and hub borrow
+// server-owned state; do not retain this view after the handler returns.
 class Session final {
 public:
     using SendFunction = std::function<bool(SessionId session_id, const core::Buffer& data, std::string* error_message)>;

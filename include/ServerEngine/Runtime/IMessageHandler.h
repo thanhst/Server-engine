@@ -8,6 +8,10 @@ namespace serverengine::runtime {
 
 class Session;
 
+// One instance may serve many connections concurrently. Keep per-client state
+// in the Session/ConnectionHub; protect any mutable state shared by callbacks.
+// Session is borrowed for the callback duration. Request shutdown through your
+// application owner thread instead of calling Server::stop() in a callback.
 class IMessageHandler {
 public:
     virtual ~IMessageHandler() = default;
