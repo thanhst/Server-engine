@@ -24,7 +24,8 @@ HTTPS → SQL → JSON, hoặc [audio/video](docs/audio-video.md) để hiểu s
 
 Đọc **[DLL quickstart](docs/dll-quickstart.md)** trước nếu muốn xây ứng dụng mới.
 Có [host game mẫu](examples/GameServer/main.cpp) chỉ dùng C ABI và
-[client trình duyệt](examples/WebClient/index.html) dùng WSS.
+[client trình duyệt](examples/WebClient/index.html) dùng WSS; client native
+[GameClient](examples/GameClient/main.cpp) thử TCP/TLS và UDP.
 Có thêm [host web/media](examples/WebServer/main.cpp) với C++ wrapper trên C ABI.
 Để dùng **UDP tin cậy/không tin cậy và client native**, đọc
 [Datagram Transport](docs/datagram-transport.md). Preset `vs2022-x64-datagram` bật module này;
@@ -67,6 +68,7 @@ Nếu mới học networking, đọc backend `src/Net/Threaded/` trước IOCP.
 | Nơi | Trách nhiệm |
 | --- | --- |
 | `examples/EchoServer/` | Điểm vào, cấu hình và `EchoHandler` của ứng dụng mẫu |
+| `examples/GameClient/` | Client native cho game demo qua TCP/TLS hoặc UDP |
 | `include/ServerEngine/` | API để dự án khác sử dụng engine |
 | `src/Runtime/` | Vòng đời server, session, chuyển callback đến ứng dụng |
 | `src/Net/` | Kết nối TCP, I/O, phân tách message |

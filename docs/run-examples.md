@@ -1,7 +1,8 @@
 # Chạy thử web và game trên máy của bạn
 
-**Có hai cửa sổ khác nhau:** cửa sổ console chạy server và cửa sổ browser chạy
-client. Giữ console mở trong lúc thử; browser gửi yêu cầu tới server đó.
+**Có hai phía khác nhau:** cửa sổ console chạy server và client gửi yêu cầu tới
+server đó. WSS dùng client browser; TCP/TLS và UDP dùng client native
+`ServerEngineGameClient.exe`. Giữ console server mở trong lúc thử.
 Demo game hiện là gửi lệnh và nhận phản hồi, chưa có nhân vật hay đồ họa game.
 
 Trong lần kiểm tra Windows x64 Debug ngày 05/09/2026, DLL và hai host đã được
@@ -10,9 +11,10 @@ bằng client Node.js xác minh chứng chỉ/hostname; chưa kiểm tra giao di
 browser, camera/mic hoặc chạy toàn bộ CTest. Binary, database thử và chứng chỉ
 local không được đưa lên Git; bản clone mới cần làm bước 1.
 
-**Nếu đã có binary và chứng chỉ, bắt đầu từ bước 2 hoặc 3 bên dưới.** Nhấp đúp `.exe`
-trực tiếp sẽ thiếu tham số certificate/key: chương trình in `Usage` rồi thoát
-với mã 2. Dùng hai file `.cmd` ở gốc repo để truyền đúng tham số và giữ cửa sổ.
+**Nếu đã có binary và chứng chỉ, bắt đầu từ bước 2 hoặc 3 bên dưới.** Nhấp đúp
+server `.exe` trực tiếp sẽ thiếu tham số certificate/key: chương trình in
+`Usage` rồi thoát với mã 2. Dùng các file `.cmd` ở gốc repo để truyền đúng
+tham số.
 
 ## 1. Chuẩn bị một lần trên máy mới
 
@@ -33,13 +35,14 @@ sửa trong cửa sổ PowerShell đang mở.
 Configure có thể tải và chuẩn bị dependency, nên lần đầu có thể lâu.
 Đây là lệnh dành cho bạn chạy thủ công; launcher không tự build/configure.
 
-Sau build, ba file cần thiết nằm cùng thư mục:
+Sau build, các file cần thiết nằm cùng thư mục:
 
 ```text
 out/build/vs2022-x64-dll/Debug/
   ServerEngine.dll
   ServerEngineWebServer.exe
   ServerEngineGameServer.exe
+  ServerEngineGameClient.exe
 ```
 
 Tạo cặp chứng chỉ development bằng OpenSSL 3 theo
@@ -107,6 +110,32 @@ Mỗi lệnh đều tăng bộ đếm, kể cả `STATS` và `HISTORY`. Nếu g�
 số trả về sẽ khác. `HISTORY` đọc số đã lưu từ SQLite; tên hiển thị chưa phải
 tài khoản đăng nhập. Log browser thêm tiền tố `SEND`/`RECV` vào các dòng này.
 
+Browser không hỗ trợ raw TCP hoặc UDP. Để thử hai listener còn lại, giữ
+`GameServer` đang chạy rồi mở terminal khác tại gốc repo:
+
+```powershell
+.\run-game-client-tcp.cmd PING
+.\run-game-client-tcp.cmd "NAME Thanh"
+.\run-game-client-udp.cmd PING
+.\run-game-client-udp.cmd "HELLO UDP"
+```
+
+Nếu nhấp đúp client `.cmd` mà không truyền lệnh, client sẽ mở chế độ nhập lệnh
+tương tác. Gõ `PING`, `NAME Thanh`, `STATS` hoặc một payload UDP rồi Enter;
+dòng trống sẽ thoát.
+
+TCP client verify certificate/hostname bằng `certs/server-cert.pem` và dùng
+frame 4 byte big-endian như DLL yêu cầu. UDP client gửi một datagram cho mỗi
+lệnh; trong demo hiện tại UDP chỉ trả `PONG` cho `PING`, còn payload khác được
+echo lại và không ghi SQLite.
+
+Nếu muốn gọi thẳng EXE native để gửi nhiều lệnh trên cùng kết nối TCP:
+
+```powershell
+.\out\build\vs2022-x64-dll\Debug\ServerEngineGameClient.exe --tcp PING "NAME Thanh" STATS HISTORY
+.\out\build\vs2022-x64-dll\Debug\ServerEngineGameClient.exe --udp PING "HELLO UDP"
+```
+
 ## Dừng hoặc kiểm tra file trước khi chạy
 
 Nhấn **Ctrl+C trong cửa sổ server** để dừng. Đóng browser chỉ ngắt client;
@@ -117,11 +146,12 @@ Chỉ kiểm tra file cần thiết, không mở server:
 ```powershell
 .\scripts\run-example.ps1 -Example Web -CheckOnly
 .\scripts\run-example.ps1 -Example Game -CheckOnly
+.\scripts\run-game-client.ps1 -Protocol Tcp -CheckOnly
+.\scripts\run-game-client.ps1 -Protocol Udp -CheckOnly
 ```
 
-Hai launcher `.cmd` mặc định dùng bản **x64 DLL / Debug**. Nếu bạn đã build
-Release, chạy `.\scripts\run-example.ps1 -Example Web -Configuration Release`
-hoặc đổi `Web` thành `Game`.
+Các launcher `.cmd` mặc định dùng bản **x64 DLL / Debug**. Nếu bạn đã build
+Release, chạy script PowerShell tương ứng với `-Configuration Release`.
 
 Không dùng `ServerEngine.exe` hoặc `ServerEngineTcpTest.exe` để thử hai demo
 này: đó là server/client mẫu cũ với giao thức TCP khác. Điểm vào server Echo

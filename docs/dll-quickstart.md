@@ -114,7 +114,8 @@ của triplet/cấu hình khác. Vẫn cần MSVC runtime phù hợp khi triển
 
 Output chính: `out/build/vs2022-x64-dll/Debug/ServerEngine.dll`, import library
 trong `out/build/vs2022-x64-dll/lib/Debug/ServerEngine.lib`, và host mẫu
-`out/build/vs2022-x64-dll/Debug/ServerEngineGameServer.exe`.
+`out/build/vs2022-x64-dll/Debug/ServerEngineGameServer.exe`. Client native
+`ServerEngineGameClient.exe` nằm cùng thư mục khi bật game example.
 
 ```powershell
 cmake --install out/build/vs2022-x64-dll --config Debug --prefix out/sdk
@@ -141,6 +142,12 @@ Tạo chứng chỉ dev theo [security.md](security.md), rồi chạy từ gốc
 Host mẫu mở loopback: TCP/TLS 9443, UDP plaintext 9001, WSS 9444 path `/game`.
 Client web là [examples/WebClient/index.html](../examples/WebClient/index.html).
 Browser phải tin cậy certificate dev và hostname trước khi WSS kết nối.
+Browser không mở được raw TCP/UDP, nên dùng client native cho hai đường đó:
+
+```powershell
+.\out\build\vs2022-x64-dll\Debug\ServerEngineGameClient.exe --tcp PING "NAME Thanh" STATS
+.\out\build\vs2022-x64-dll\Debug\ServerEngineGameClient.exe --udp PING "HELLO UDP"
+```
 
 `PING → PONG`, `NAME Thanh` đổi tên hiển thị trong RAM, `STATS` trả số message
 do server đếm; `HISTORY` đọc lại số message từ SQLite qua query nền.
